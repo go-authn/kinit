@@ -113,7 +113,7 @@ func RootCmd() *cobra.Command {
 	f.StringVar(&credFile, "cred-file", "", "also write the KRB-CRED (a .kirbi) here, mode 0600")
 	f.BoolVar(&noInject, "no-inject", false, "do not load the ticket into the logon session (the default off Windows)")
 	f.DurationVar(&timeout, "timeout", 5*time.Minute, "give up after this long")
-	root.AddCommand(keygenCmd(), setupCmd())
+	root.AddCommand(keygenCmd(), setupCmd(), loadCmd())
 	return root
 }
 
