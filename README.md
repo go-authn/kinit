@@ -14,6 +14,14 @@ on this path, and there is no option to add one.
 authn-kinit --issuer https://login.example.org --client kinit
 ```
 
+Install (the binary is `authn-kinit`, never `kinit`: that name belongs to MIT
+and Heimdal Kerberos, and `kinit.exe` to MIT Kerberos for Windows and to Java
+runtimes):
+
+```
+go install github.com/go-authn/kinit/cmd/authn-kinit@latest
+```
+
 Pure Go, `CGO_ENABLED=0`, windows/amd64 and windows/arm64. On other systems it
 runs, fetches, and writes the KRB-CRED with `--cred-file`; loading a ticket into
 a logon session is Windows only.

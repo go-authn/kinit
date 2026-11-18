@@ -57,7 +57,20 @@ jobs:
       - uses: actions/setup-go@v7
         with: { go-version-file: go.mod, check-latest: true, cache: true }
       - run: go vet ./...
-      - run: go build -trimpath -o authn-kinit-${{ matrix.goarch }}.exe .
+      # `go install` names the binary after the last element of the package
+      # path: building the way a user installs it must give authn-kinit.exe,
+      # never kinit.exe (MIT/Heimdal kinit, MIT KfW, Java runtimes).
+      - name: build as installed, and check the binary's name
+        shell: bash
+        run: |
+          mkdir out
+          go build -trimpath -o out/ ./cmd/authn-kinit
+          ls out
+          test -f out/authn-kinit.exe || { echo "::error::expected out/authn-kinit.exe"; exit 1; }
+          test ! -e out/kinit.exe || { echo "::error::a binary named kinit.exe was built"; exit 1; }
+          if go list -f '{{.Name}} {{.ImportPath}}' ./... | grep -E '^main ' | grep -v '/cmd/authn-kinit$'; then
+            echo "::error::a main package outside cmd/authn-kinit"; exit 1
+          fi
 
   race:
     name: race detector
