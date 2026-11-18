@@ -30,7 +30,9 @@ func TestTheMainPackageLivesAtCmdAuthnKinit(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			if strings.Contains(string(b), "\npackage main\n") || strings.HasPrefix(string(b), "package main\n") {
+			// A Windows checkout may have CRLF line ends.
+			src := strings.ReplaceAll(string(b), "\r\n", "\n")
+			if strings.Contains(src, "\npackage main\n") || strings.HasPrefix(src, "package main\n") {
 				mains = append(mains, filepath.ToSlash(filepath.Dir(p)))
 			}
 		}
