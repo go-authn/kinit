@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.0
+
+- Added: `setup --kdc-proxy https://HOST/KdcProxy` writes Windows' KdcProxy
+  client policy (MS-KKDCP; `Kerberos.admx`: `KdcProxyServer_Enabled` and
+  `KdcProxy\ProxyServers`), so the KDC is reached through port 443.
+- Fixed: `setup` is idempotent (#5). It reads `KdcNames` and `SpnMappings`
+  first and adds only what is missing; `--remove` skips what is already gone.
+
 ## Unreleased (v0.2.0)
 
 - **Breaking: the install path changed.** The program moved from the module
