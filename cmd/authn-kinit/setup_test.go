@@ -112,6 +112,8 @@ func TestSetupRefusesAProxyItCannotExpress(t *testing.T) {
 		"https://kdc example.org/KdcProxy",
 		"https://kdc.example.org\" /> <https evil/KdcProxy",
 		"kdc.example.org",
+		"https://-kdc.example.org/KdcProxy", // a URL that parses, but not a host name
+		"https://kdc_1.example.org/KdcProxy",
 	} {
 		if _, err := setupPlan("EXAMPLE.ORG", "kdc.example.org", []string{"fs.example.org"}, bad, false); err == nil {
 			t.Errorf("%q accepted", bad)
