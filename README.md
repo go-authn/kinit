@@ -79,6 +79,33 @@ anything is run, and ksetup is started without a shell. Also needed:
   outright: `Set-SmbClientConfiguration -BlockNTLM $true`;
 - Microsoft documents a restart after `/addkdc`; the lab needed none.
 
+`setup` is safe to run again: it reads `KdcNames` and `SpnMappings` under
+`HKLM\SYSTEM\CurrentControlSet\Control\Lsa\Kerberos` first and adds only what is
+missing (`ksetup /addkdc` alone appends a second copy, kinit#5), saying
+`already done, skipped`; `--remove` likewise finds nothing to do the second time.
+
+### Through port 443: the KDC proxy
+
+```
+authn-kinit setup --realm EXAMPLE.ORG --kdc kdc.example.org --host fs.example.org \
+    --kdc-proxy https://kdc.example.org/KdcProxy
+```
+
+also writes Windows' own client policy "Specify KDC proxy servers for Kerberos
+clients" ([MS-KKDCP](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kkdcp/5bcebb8d-b747-4ee5-9453-428aec1c5c38),
+Kerberos over HTTPS; `Kerberos.admx`, [ADMX_Kerberos/KdcProxyServer](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-kerberos)):
+`KdcProxyServer_Enabled = 1` under
+`HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\System\Kerberos`, and
+under `...\Kerberos\KdcProxy\ProxyServers` a value named after the realm in lower
+case (a DNS suffix, as the policy asks) holding `<https kdc.example.org />`. With
+the proxy in place port 88 need not be open to the internet. The policy's
+documented syntax names a host and nothing else, so the proxy must answer on 443
+at `/KdcProxy` (what [go-authn/kdcd](https://github.com/go-authn/kdcd)'s `kkdcp`
+block serves behind a TLS proxy), and its certificate must be trusted by the
+machine; a URL naming another port or path is refused rather than written in a
+syntax nobody documented. `--remove --kdc-proxy URL` deletes the mapping and
+leaves the policy switch.
+
 ## Check it
 
 ```
