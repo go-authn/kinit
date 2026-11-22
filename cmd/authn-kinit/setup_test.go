@@ -83,7 +83,8 @@ func TestSetupPlanWithAProxy(t *testing.T) {
 		got = append(got, strings.Join(s.argv, " "))
 	}
 	want := []string{
-		"ksetup /addkdc EXAMPLE.ORG kdc.example.org",
+		// no ksetup /addkdc: a KdcNames value defeats the proxy; one is deleted
+		`reg delete HKLM\SYSTEM\CurrentControlSet\Control\Lsa\Kerberos\Domains\EXAMPLE.ORG /v KdcNames /f`,
 		"ksetup /addhosttorealmmap fs.example.org EXAMPLE.ORG",
 		`reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Kerberos /v KdcProxyServer_Enabled /t REG_DWORD /d 1 /f`,
 		`reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Kerberos\KdcProxy\ProxyServers /v example.org /t REG_SZ /d <https kdc.example.org /> /f`,
@@ -146,7 +147,7 @@ func TestParseRegQuery(t *testing.T) {
 // fake, like ksetup, lists the KDC twice, which the control below shows.
 func TestSetupIsIdempotent(t *testing.T) {
 	args := func(remove bool) []step {
-		p, err := setupPlan("MESOCENTRE.TEST", "kdc.mesocentre.test", []string{"fs.mesocentre.test"}, "https://kdc.mesocentre.test/KdcProxy", remove)
+		p, err := setupPlan("MESOCENTRE.TEST", "kdc.mesocentre.test", []string{"fs.mesocentre.test"}, "", remove)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -186,13 +187,6 @@ func TestSetupIsIdempotent(t *testing.T) {
 	if n := w.count("ksetup /addkdc"); n != 1 {
 		t.Errorf("ksetup /addkdc ran %d times", n)
 	}
-	if got := w.values[kdcProxyServers]["mesocentre.test"]; got != "REG_SZ    <https kdc.mesocentre.test />" {
-		t.Errorf("the proxy mapping: %q", got)
-	}
-	if got := w.values[kerberosPolicy]["KdcProxyServer_Enabled"]; got != "REG_DWORD    1" {
-		t.Errorf("the switch: %q", got)
-	}
-
 	for range 2 {
 		if err := applySetup(args(true), true, w.run, &out); err != nil {
 			t.Fatal(err)
@@ -201,11 +195,82 @@ func TestSetupIsIdempotent(t *testing.T) {
 	if _, ok := w.values[kdcKey]["KdcNames"]; ok {
 		t.Error("the KDC is still listed after --remove")
 	}
-	if _, ok := w.values[kdcProxyServers]["mesocentre.test"]; ok {
-		t.Error("the proxy mapping is still there after --remove")
-	}
 	if n := w.count("ksetup /delkdc"); n != 1 {
 		t.Errorf("ksetup /delkdc ran %d times", n)
+	}
+}
+
+// With a proxy no KdcNames is written (it makes Windows skip the proxy), and one
+// that v0.3.0 left is removed, once; --remove undoes the mapping and does not
+// look for a KdcNames that was never written.
+func TestSetupWithAProxyWritesNoKdcNamesAndRepairsV030(t *testing.T) {
+	kdcKey := kerberosLsaKey + `\Domains\MESOCENTRE.TEST`
+	plan := func(kdc string, remove bool) []step {
+		p, err := setupPlan("MESOCENTRE.TEST", kdc, []string{"fs.mesocentre.test"}, "https://kdc.mesocentre.test/KdcProxy", remove)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	for _, kdc := range []string{"kdc.mesocentre.test", ""} { // --kdc optional with a proxy
+		// Fresh machine: nothing is written under Domains, ever.
+		w := newFakeWindows()
+		var out bytes.Buffer
+		for range 2 {
+			if err := applySetup(plan(kdc, false), false, w.run, &out); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, ok := w.values[kdcKey]["KdcNames"]; ok || w.count("ksetup /addkdc") != 0 || w.count("reg delete") != 0 {
+			t.Errorf("kdc=%q: fresh machine: KdcNames written or deleted: %v", kdc, w.log)
+		}
+		if got := w.values[kdcProxyServers]["mesocentre.test"]; got != "REG_SZ    <https kdc.mesocentre.test />" {
+			t.Errorf("the proxy mapping: %q", got)
+		}
+		if got := w.values[kerberosPolicy]["KdcProxyServer_Enabled"]; got != "REG_DWORD    1" {
+			t.Errorf("the switch: %q", got)
+		}
+
+		// A machine set up by v0.3.0: KdcNames is there, setup removes it, once.
+		old := newFakeWindows()
+		old.set(kdcKey, "KdcNames", "REG_MULTI_SZ", "kdc.mesocentre.test")
+		for range 2 {
+			if err := applySetup(plan(kdc, false), false, old.run, &out); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, ok := old.values[kdcKey]["KdcNames"]; ok {
+			t.Errorf("kdc=%q: KdcNames left by v0.3.0 was not removed", kdc)
+		}
+		if n := old.count("reg delete " + kdcKey); n != 1 {
+			t.Errorf("kdc=%q: KdcNames deleted %d times, want 1", kdc, n)
+		}
+		if _, ok := old.values[kdcProxyServers]["mesocentre.test"]; !ok {
+			t.Error("the repair dropped the proxy mapping")
+		}
+
+		// --remove: the mapping goes; a KdcNames that is absent is not asked about.
+		for range 2 {
+			if err := applySetup(plan(kdc, true), true, w.run, &out); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, ok := w.values[kdcProxyServers]["mesocentre.test"]; ok {
+			t.Error("the proxy mapping is still there after --remove")
+		}
+	}
+}
+
+func TestSetupNeedsARealmAndAKdcOrAProxy(t *testing.T) {
+	hosts := []string{"fs.example.org"}
+	if _, err := setupPlan("", "", hosts, "https://kdc.example.org/KdcProxy", false); err == nil || !strings.Contains(err.Error(), "--realm") {
+		t.Errorf("a bare --kdc-proxy: %v", err)
+	}
+	if _, err := setupPlan("EXAMPLE.ORG", "", hosts, "", false); err == nil || !strings.Contains(err.Error(), "--kdc") {
+		t.Errorf("neither --kdc nor --kdc-proxy: %v", err)
+	}
+	if _, err := setupPlan("EXAMPLE.ORG", "", hosts, "https://kdc.example.org/KdcProxy", false); err != nil {
+		t.Errorf("--realm and --kdc-proxy alone: %v", err)
 	}
 }
 
