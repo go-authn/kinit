@@ -377,6 +377,17 @@ func TestMachineTokenAndCommand(t *testing.T) {
 	if err := cmd.Execute(); err == nil {
 		t.Error("a run with no issuer succeeded")
 	}
+
+	// A credential file that cannot be written is an error, not a success
+	// that says "wrote".
+	buf.Reset()
+	cmd = RootCmd()
+	cmd.SetOut(&buf)
+	cmd.SetErr(&buf)
+	cmd.SetArgs([]string{"--issuer", p.srv.URL, "--client", "winpc-17", "--machine-key", keyFile, "--kid", "k1", "--cred-file", filepath.Join(dir, "no", "such", "dir", "t.kirbi"), "--no-inject"})
+	if err := cmd.Execute(); err == nil || strings.Contains(buf.String(), "wrote ") {
+		t.Errorf("an unwritable credential file: %v\n%s", err, buf.String())
+	}
 }
 
 func TestKeygen(t *testing.T) {

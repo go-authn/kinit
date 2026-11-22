@@ -87,10 +87,7 @@ func RootCmd() *cobra.Command {
 				return fmt.Errorf("the provider's ticket is unusable: %w", err)
 			}
 			if credFile != "" {
-				if err := os.WriteFile(credFile, cred, 0o600); err != nil {
-					return err
-				}
-				if err := os.Chmod(credFile, 0o600); err != nil {
+				if err := writePrivate(credFile, cred); err != nil {
 					return err
 				}
 				fmt.Fprintf(out, "wrote %s\n", credFile)
@@ -110,7 +107,7 @@ func RootCmd() *cobra.Command {
 	f.StringVar(&client, "client", "", "the client ID the provider knows this program by (a public client with kerberos_tickets; for a machine, its key client)")
 	f.StringVar(&machineKey, "machine-key", "", "unattended: the machine's private key (PEM, PKCS#8, P-256 or Ed25519), instead of a login")
 	f.StringVar(&kid, "kid", "", "with --machine-key: the key ID the provider registered it under")
-	f.StringVar(&credFile, "cred-file", "", "also write the KRB-CRED (a .kirbi) here, mode 0600")
+	f.StringVar(&credFile, "cred-file", "", "also write the KRB-CRED (a .kirbi) here, mode 0600 (Windows: the folder's permissions apply, use a private folder)")
 	f.BoolVar(&noInject, "no-inject", false, "do not load the ticket into the logon session (the default off Windows)")
 	f.DurationVar(&timeout, "timeout", 5*time.Minute, "give up after this long")
 	root.AddCommand(keygenCmd(), setupCmd(), loadCmd())
