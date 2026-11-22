@@ -4,8 +4,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/go-authn/oidc v0.4.3 h1:H2L1YtpwGQCMoc65vhH5wLPM+09Wygh/32hjtYI052k=
 github.com/go-authn/oidc v0.4.3/go.mod h1:H/Hodeu9kh/Xz3y51XfYu6MZdMJaNfXClyVH0GTUebE=
-github.com/go-authn/rp v0.4.0 h1:HnhkmxVTkgVPsm+z7VoLM91qJEj3TCMYHiPAI2f+IPc=
-github.com/go-authn/rp v0.4.0/go.mod h1:bTku1Ufwg5hoWlNHJnwxh9IATKYivxwly1qH+s5Ww+M=
+github.com/go-authn/rp v0.4.1 h1:FHu6HuLx21+1Z5DKaXCnfj9bu3FxZ1w1Wt/hhcQVs7Q=
+github.com/go-authn/rp v0.4.1/go.mod h1:6ujJvDYmm3uZzhwoOjq6XEovFnTxg1ACDLn7NrJXGMk=
 github.com/gorilla/securecookie v1.1.1/go.mod h1:ra0sb63/xPlUeL+yeDciTfxMRAA+MP+HVt/4epWDjd4=
 github.com/gorilla/sessions v1.2.1/go.mod h1:dk2InVEVJ0sfLlnXv9EAgkf6ecYs/i80K/zI+bUmuGM=
 github.com/hashicorp/go-uuid v1.0.2/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
