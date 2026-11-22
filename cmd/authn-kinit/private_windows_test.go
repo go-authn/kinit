@@ -107,19 +107,3 @@ func TestCreateExclusiveSetsTheDACLAtCreation(t *testing.T) {
 		t.Fatalf("a second create of the same name: %v, want it to exist", err)
 	}
 }
-
-func TestCreateTempHasTheDACL(t *testing.T) {
-	dir := t.TempDir()
-	f, err := createTemp(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-	assertOwnerOnly(t, f.Name())
-	if filepath.Dir(f.Name()) != dir {
-		t.Fatalf("temp file %s is not in %s", f.Name(), dir)
-	}
-	if _, err := createTemp(filepath.Join(dir, "no", "such")); err == nil {
-		t.Fatal("made a temp file in a folder that is not there")
-	}
-}

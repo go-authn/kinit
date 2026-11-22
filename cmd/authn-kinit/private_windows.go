@@ -5,12 +5,8 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/hex"
-	"errors"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -58,20 +54,4 @@ func createExclusive(path string) (*os.File, error) {
 		return nil, &fs.PathError{Op: "open", Path: path, Err: err}
 	}
 	return os.NewFile(uintptr(h), path), nil
-}
-
-// createTemp is os.CreateTemp with the same access list as createExclusive: a
-// new name, retried while it is taken.
-func createTemp(dir string) (*os.File, error) {
-	for i := 0; ; i++ {
-		var b [8]byte
-		if _, err := rand.Read(b[:]); err != nil {
-			return nil, err
-		}
-		f, err := createExclusive(filepath.Join(dir, ".authn-kinit-"+hex.EncodeToString(b[:])))
-		if errors.Is(err, fs.ErrExist) && i < 100 {
-			continue
-		}
-		return f, err
-	}
 }

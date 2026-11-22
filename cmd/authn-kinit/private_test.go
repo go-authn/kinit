@@ -92,3 +92,22 @@ func TestACredFileLeavesNothingBehind(t *testing.T) {
 		t.Fatalf("%d entries, want only the cred file", len(ents))
 	}
 }
+
+// A directory others can write to is refused: the ticket could be swapped
+// there (go-authn/harden's privfile).
+func TestACredFileIsRefusedInAWritableDirectory(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("modes are Unix")
+	}
+	dir := t.TempDir()
+	if err := os.Chmod(dir, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "cred")
+	if err := writePrivate(path, []byte("TICKET")); err == nil {
+		t.Fatal("a ticket was written into a world-writable directory")
+	}
+	if _, err := os.Stat(path); err == nil {
+		t.Fatal("the file exists")
+	}
+}

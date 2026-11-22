@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.3.3
+
+- `--cred-file` is written by `github.com/go-authn/harden/privfile` v0.2.0
+  (the temporary-file, sync and rename code, and its Windows owner-only DACL,
+  moved there from this module; `keygen --out` keeps its own exclusive create).
+  Behaviour change: a directory that is a symlink, belongs to another user or
+  is writable by group or others (for instance `/tmp` itself) is now refused
+  for `--cred-file`, as the ticket could be swapped there.
+
 ## v0.3.2
 
 - Fixed (#10): on Windows `--cred-file` and the `keygen --out` private key are

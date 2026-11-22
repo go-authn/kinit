@@ -3,6 +3,7 @@ module github.com/go-authn/kinit
 go 1.27.4
 
 require (
+	github.com/go-authn/harden v0.2.0
 	github.com/go-authn/rp v0.4.0
 	github.com/jcmturner/gofork v1.7.6
 	github.com/jcmturner/gokrb5/v8 v8.4.4
