@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.4
+
+- Fixed (#14): `setup --kdc-proxy` no longer runs `ksetup /addkdc`. A
+  `KdcNames` value for the realm makes Windows try only that address on port 88
+  and never the MS-KKDCP proxy (`net use` 1223, event 302); deleting it made the
+  proof pass on a fresh Windows 11. A `KdcNames` left by v0.3.0 is deleted, so
+  running `setup --kdc-proxy` again repairs the machine.
+- `--kdc` is optional with `--kdc-proxy` (and unused); without a proxy it is
+  still required. A missing `--realm` now says "give --realm" instead of
+  `realm ""`; the realm is not derived (a realm is not always its KDC's domain).
+
 ## v0.3.3
 
 - `--cred-file` is written by `github.com/go-authn/harden/privfile` v0.2.0

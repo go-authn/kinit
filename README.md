@@ -87,11 +87,11 @@ missing (`ksetup /addkdc` alone appends a second copy, kinit#5), saying
 ### Through port 443: the KDC proxy
 
 ```
-authn-kinit setup --realm EXAMPLE.ORG --kdc kdc.example.org --host fs.example.org \
+authn-kinit setup --realm EXAMPLE.ORG --host fs.example.org \
     --kdc-proxy https://kdc.example.org/KdcProxy
 ```
 
-also writes Windows' own client policy "Specify KDC proxy servers for Kerberos
+writes Windows' own client policy "Specify KDC proxy servers for Kerberos
 clients" ([MS-KKDCP](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kkdcp/5bcebb8d-b747-4ee5-9453-428aec1c5c38),
 Kerberos over HTTPS; `Kerberos.admx`, [ADMX_Kerberos/KdcProxyServer](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-kerberos)):
 `KdcProxyServer_Enabled = 1` under
@@ -105,6 +105,15 @@ block serves behind a TLS proxy), and its certificate must be trusted by the
 machine; a URL naming another port or path is refused rather than written in a
 syntax nobody documented. `--remove --kdc-proxy URL` deletes the mapping and
 leaves the policy switch.
+
+With `--kdc-proxy`, `ksetup /addkdc` is **not** run and `--kdc` is optional (and
+unused): a `KdcNames` value for the realm makes Windows try only that address on
+port 88 and never the proxy (measured on a fresh Windows 11: `net use` fails with
+1223 and only Kerberos event 302 is logged; deleting that one value makes it
+work, `klist` showing `Kdc Called: KdcProxy:<host>`). A `KdcNames` left by v0.3.0
+is deleted by the next `setup --kdc-proxy`, so running it again repairs such a
+machine. `--realm` is always required: it is never derived from the proxy's host
+name, because a realm is not always its KDC's DNS domain.
 
 ## Check it
 

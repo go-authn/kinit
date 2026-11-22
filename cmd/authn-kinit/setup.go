@@ -74,6 +74,9 @@ func ksetupPlan(realm, kdc string, hosts []string, remove bool) ([][]string, err
 type step struct {
 	argv  []string
 	state *regItem
+	// absent: the step's goal is that state is NOT there, whatever the mode
+	// (it is skipped when the value is already gone).
+	absent bool
 }
 
 // regItem is "does this registry value hold this item". An empty item asks
@@ -82,10 +85,18 @@ type regItem struct{ key, value, item string }
 
 // setupPlan is every command of a setup, in order.
 func setupPlan(realm, kdc string, hosts []string, proxy string, remove bool) ([]step, error) {
+	if realm == "" {
+		return nil, errors.New("give --realm: the Kerberos realm (e.g. EXAMPLE.ORG); it is not derived from --kdc or --kdc-proxy, because a realm is not always its KDC's domain")
+	}
 	if !realmRe.MatchString(realm) {
 		return nil, fmt.Errorf("realm %q: capital letters, digits, dots and hyphens (e.g. EXAMPLE.ORG)", realm)
 	}
-	if !hostRe.MatchString(kdc) {
+	// With a proxy the KDC is reached through it and --kdc is not needed (nor
+	// used: see below). Without one, --kdc is required.
+	if kdc == "" && proxy == "" {
+		return nil, errors.New("give --kdc (the KDC's host name) or --kdc-proxy")
+	}
+	if kdc != "" && !hostRe.MatchString(kdc) {
 		return nil, fmt.Errorf("kdc %q: a host name", kdc)
 	}
 	if len(hosts) == 0 {
@@ -107,23 +118,33 @@ func setupPlan(realm, kdc string, hosts []string, proxy string, remove bool) ([]
 	var plan []step
 	if remove {
 		for _, h := range hosts {
-			plan = append(plan, step{[]string{"ksetup", "/delhosttorealmmap", h, realm},
-				&regItem{kerberosLsaKey + `\HostToRealm\` + realm, "SpnMappings", h}})
+			plan = append(plan, step{argv: []string{"ksetup", "/delhosttorealmmap", h, realm},
+				state: &regItem{kerberosLsaKey + `\HostToRealm\` + realm, "SpnMappings", h}})
 		}
-		plan = append(plan, step{[]string{"ksetup", "/delkdc", realm, kdc}, kdcs})
+		if kdc != "" {
+			plan = append(plan, step{argv: []string{"ksetup", "/delkdc", realm, kdc}, state: kdcs})
+		}
 		if proxyHost != "" {
 			// The switch (KdcProxyServer_Enabled) stays: it is the policy's, other
 			// mappings may need it, and with no mapping it does nothing.
 			name := proxyValueName(realm)
-			plan = append(plan, step{[]string{"reg", "delete", kdcProxyServers, "/v", name, "/f"},
-				&regItem{kdcProxyServers, name, ""}})
+			plan = append(plan, step{argv: []string{"reg", "delete", kdcProxyServers, "/v", name, "/f"},
+				state: &regItem{kdcProxyServers, name, ""}})
 		}
 		return plan, nil
 	}
-	plan = append(plan, step{[]string{"ksetup", "/addkdc", realm, kdc}, kdcs})
+	if proxyHost != "" {
+		// A KdcNames value makes Windows try only that address on port 88 and
+		// never the proxy (go-authn/kinit#14, measured on a fresh Windows 11:
+		// 1223 and event 302 with it, the proxy used the moment it is deleted).
+		// So with a proxy none is written, and one left by v0.3.0 is removed.
+		plan = append(plan, step{argv: []string{"reg", "delete", kdcs.key, "/v", "KdcNames", "/f"}, state: &regItem{kdcs.key, "KdcNames", ""}, absent: true})
+	} else {
+		plan = append(plan, step{argv: []string{"ksetup", "/addkdc", realm, kdc}, state: kdcs})
+	}
 	for _, h := range hosts {
-		plan = append(plan, step{[]string{"ksetup", "/addhosttorealmmap", h, realm},
-			&regItem{kerberosLsaKey + `\HostToRealm\` + realm, "SpnMappings", h}})
+		plan = append(plan, step{argv: []string{"ksetup", "/addhosttorealmmap", h, realm},
+			state: &regItem{kerberosLsaKey + `\HostToRealm\` + realm, "SpnMappings", h}})
 	}
 	if proxyHost != "" {
 		// reg add /f overwrites: the same value written twice is the same value.
@@ -208,7 +229,7 @@ func applySetup(plan []step, remove bool, run func(argv []string) (string, error
 			if err != nil {
 				return err
 			}
-			if there == !remove {
+			if there == (!remove && !s.absent) {
 				fmt.Fprintf(out, "already done, skipped: %s\n", line)
 				continue
 			}
@@ -240,15 +261,21 @@ func setupCmd() *cobra.Command {
 		Short: "one-time, as administrator: tell Windows where the realm's KDC is (ksetup), and its HTTPS proxy",
 		Long: `Runs ksetup /addkdc and ksetup /addhosttorealmmap. Needs an elevated prompt.
 Safe to run again: what is already there is read from the registry first and
-not added twice.
+not added twice. --realm is always required, and --kdc unless --kdc-proxy is
+given.
 
-With --kdc-proxy https://HOST/KdcProxy it also writes Windows' "Specify KDC
+With --kdc-proxy https://HOST/KdcProxy it writes Windows' "Specify KDC
 proxy servers for Kerberos clients" policy (MS-KKDCP, Kerberos over HTTPS):
 KdcProxyServer_Enabled = 1 and, under KdcProxy\ProxyServers, a value named
 after the realm (lower case) holding "<https HOST />". Windows then reaches
 the KDC through port 443 when it cannot reach it directly. The proxy must
 answer on port 443 at /KdcProxy, and its certificate must be trusted by the
 machine.
+
+With --kdc-proxy, ksetup /addkdc is NOT run, and --kdc is not used: a KdcNames
+value makes Windows try only that address on port 88 and never the proxy. A
+KdcNames value an earlier version left for the realm is deleted, so running
+setup again repairs such a machine.
 
 Also needed, and not done here:
   - the machine's clock within five minutes of the KDC's (Kerberos refuses a
@@ -281,7 +308,7 @@ You should see krbtgt/REALM and, after opening the share, cifs/<host>.`,
 		},
 	}
 	cmd.Flags().StringVar(&realm, "realm", "", "the Kerberos realm, e.g. EXAMPLE.ORG")
-	cmd.Flags().StringVar(&kdc, "kdc", "", "the KDC's host name")
+	cmd.Flags().StringVar(&kdc, "kdc", "", "the KDC's host name (required unless --kdc-proxy; not used with it)")
 	cmd.Flags().StringVar(&proxy, "kdc-proxy", "", "the KDC proxy (MS-KKDCP), https://HOST/KdcProxy: Kerberos over port 443")
 	cmd.Flags().StringSliceVar(&hosts, "host", nil, "a file server's name, as people type it (repeatable)")
 	cmd.Flags().BoolVar(&remove, "remove", false, "undo the setup")
