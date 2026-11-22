@@ -385,9 +385,17 @@ func TestMachineTokenAndCommand(t *testing.T) {
 	cmd.SetOut(&buf)
 	cmd.SetErr(&buf)
 	cmd.SetArgs([]string{"--issuer", p.srv.URL, "--client", "winpc-17", "--machine-key", keyFile, "--kid", "k1", "--cred-file", filepath.Join(dir, "no", "such", "dir", "t.kirbi"), "--no-inject"})
-	if err := cmd.Execute(); err == nil || strings.Contains(buf.String(), "wrote ") {
-		t.Errorf("an unwritable credential file: %v\n%s", err, buf.String())
-	}
+	// A crash here is a failed assertion, not the end of the test binary.
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("an unwritable credential file crashed the command: %v", r)
+			}
+		}()
+		if err := cmd.Execute(); err == nil || strings.Contains(buf.String(), "wrote ") {
+			t.Errorf("an unwritable credential file: %v\n%s", err, buf.String())
+		}
+	}()
 }
 
 func TestKeygen(t *testing.T) {

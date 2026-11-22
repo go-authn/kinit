@@ -10,7 +10,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -37,7 +36,7 @@ func keygenCmd() *cobra.Command {
 				return err
 			}
 			// O_EXCL: a key that is already there is somebody's credential.
-			f, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+			f, err := createExclusive(out) // 0600; on Windows a protected owner-only DACL
 			if err != nil {
 				return err
 			}

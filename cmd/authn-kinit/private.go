@@ -15,11 +15,12 @@ import (
 // path put the ticket in whatever it pointed to. A rename replaces the name,
 // not the target of a link.
 //
-// On Windows the mode bits mean only the read-only attribute: the file takes
-// the permissions of the folder it is made in. Keep --cred-file in a folder
-// only the account can open.
+// On Windows the mode bits mean only the read-only attribute, so the temporary
+// file is made by createTemp with a protected DACL for the current account
+// alone, set by CreateFile as the file is made (private_windows.go). The rename
+// keeps that security descriptor.
 func writePrivate(path string, data []byte) error {
-	f, err := os.CreateTemp(filepath.Dir(path), ".authn-kinit-*")
+	f, err := createTemp(filepath.Dir(path))
 	if err != nil {
 		return err
 	}
