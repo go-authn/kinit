@@ -44,11 +44,31 @@ func TestACredFileIsNeverWrittenThroughAnExistingFile(t *testing.T) {
 	}
 }
 
+// A temporary file that cannot be made is an error from writePrivate, and
+// nothing is created. The recover turns a crash on a missing file into a
+// failed assertion, so the test says what the guard is for.
+func TestAFailedCreateTempIsAnErrorAndLeavesNoFile(t *testing.T) {
+	dir := t.TempDir()
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("writePrivate crashed instead of returning the error: %v", r)
+		}
+	}()
+	err := writePrivate(filepath.Join(dir, "no", "such", "cred"), []byte("x"))
+	if err == nil {
+		t.Fatal("no error when the temporary file cannot be made")
+	}
+	ents, rerr := os.ReadDir(dir)
+	if rerr != nil {
+		t.Fatal(rerr)
+	}
+	if len(ents) != 0 {
+		t.Fatalf("%d entries left in %s, want none", len(ents), dir)
+	}
+}
+
 func TestACredFileLeavesNothingBehind(t *testing.T) {
 	dir := t.TempDir()
-	if err := writePrivate(filepath.Join(dir, "no", "such", "cred"), []byte("x")); err == nil {
-		t.Fatal("wrote into a directory that is not there")
-	}
 	// A name that cannot be replaced (a directory with something in it): the
 	// error comes back and the temporary file is removed.
 	busy := filepath.Join(dir, "busy")
