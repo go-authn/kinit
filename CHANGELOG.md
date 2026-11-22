@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.3.2
+
+- Fixed (#10): on Windows `--cred-file` and the `keygen --out` private key are
+  created with a protected DACL that holds one ACE, an allow for the current
+  account's SID (FILE_ALL_ACCESS), so they no longer take the folder's access
+  list. The descriptor is passed in the SECURITY_ATTRIBUTES of `CreateFile`
+  (`CREATE_NEW`), so the file is never readable by anyone else, not even for a
+  moment; the temporary file written before the rename is made the same way.
+  SYSTEM and Administrators get no entry: they can take ownership or use the
+  backup privilege whatever the DACL says, and nothing needs them to read it.
+  POSIX is unchanged (0600, `O_EXCL`, `os.CreateTemp`).
+- Added: `golang.org/x/sys` as a dependency (windows only).
+- Tested on `windows-latest`: the DACL is read back with
+  `GetNamedSecurityInfo`; exactly one non-inherited allow ACE for the owner's
+  SID, and `SE_DACL_PROTECTED` set.
+
 ## v0.3.1
 
 Security audit 2026-11-21 (suspicions, go-authn/kinit).

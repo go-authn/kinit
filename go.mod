@@ -7,6 +7,7 @@ require (
 	github.com/jcmturner/gofork v1.7.6
 	github.com/jcmturner/gokrb5/v8 v8.4.4
 	github.com/spf13/cobra v1.10.2
+	golang.org/x/sys v0.50.0
 )
 
 require (
