@@ -2,12 +2,12 @@ github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6N
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/go-authn/harden v0.2.0 h1:xPWLSeelcFEo4gJU5aTNWngZn6R/VQ9bTGDx3BRrUb0=
-github.com/go-authn/harden v0.2.0/go.mod h1:sceLxhnMHtExHEp9bU8XHKCw2fp+WFjh6Ri6Yxu2aVA=
+github.com/go-authn/harden v0.3.0 h1:KripIm2WdN0gUfwuw7N16i93zDe59w59fhmo80eCMt4=
+github.com/go-authn/harden v0.3.0/go.mod h1:sceLxhnMHtExHEp9bU8XHKCw2fp+WFjh6Ri6Yxu2aVA=
 github.com/go-authn/oidc v0.4.3 h1:H2L1YtpwGQCMoc65vhH5wLPM+09Wygh/32hjtYI052k=
 github.com/go-authn/oidc v0.4.3/go.mod h1:H/Hodeu9kh/Xz3y51XfYu6MZdMJaNfXClyVH0GTUebE=
-github.com/go-authn/rp v0.4.0 h1:HnhkmxVTkgVPsm+z7VoLM91qJEj3TCMYHiPAI2f+IPc=
-github.com/go-authn/rp v0.4.0/go.mod h1:bTku1Ufwg5hoWlNHJnwxh9IATKYivxwly1qH+s5Ww+M=
+github.com/go-authn/rp v0.6.0 h1:UDa9vylnbTvE4xdIc8HEiQA6XQhqLYGgSiOfC7Psn7U=
+github.com/go-authn/rp v0.6.0/go.mod h1:JpNexRtDrd7vJKeA/GZNNi5hNEfACdNWYQcDzqy/AOY=
 github.com/gorilla/securecookie v1.1.1/go.mod h1:ra0sb63/xPlUeL+yeDciTfxMRAA+MP+HVt/4epWDjd4=
 github.com/gorilla/sessions v1.2.1/go.mod h1:dk2InVEVJ0sfLlnXv9EAgkf6ecYs/i80K/zI+bUmuGM=
 github.com/hashicorp/go-uuid v1.0.2/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
